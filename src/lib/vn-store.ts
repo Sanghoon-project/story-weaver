@@ -250,13 +250,11 @@ export const draftOps = {
 };
 
 export function usePath(draft: Draft | undefined) {
-  // Path of scene IDs from root through chosen choices to current focused scene.
   const [path, setPath] = useState<string[]>([]);
 
   useEffect(() => {
     if (!draft) return;
     setPath((prev) => {
-      // Keep prev path if still valid
       if (prev.length > 0 && prev.every((id) => draft.nodes[id])) return prev;
       return [draft.rootId];
     });
@@ -271,6 +269,9 @@ export function usePath(draft: Draft | undefined) {
   const reset = useCallback(() => {
     if (draft) setPath([draft.rootId]);
   }, [draft]);
+  const setFullPath = useCallback((ids: string[]) => {
+    setPath(ids.length > 0 ? ids : draft ? [draft.rootId] : []);
+  }, [draft]);
 
   const currentId = path[path.length - 1];
   const stack = useMemo(
@@ -278,5 +279,46 @@ export function usePath(draft: Draft | undefined) {
     [path, draft],
   );
 
-  return { path, stack, currentId, push, goto, reset };
+  return { path, stack, currentId, push, goto, reset, setFullPath };
+}
+
+/** Path from root to targetId via BFS (leftmost tie-break). */
+export function findPathTo(draft: Draft, targetId: string): string[] {
+  if (targetId === draft.rootId) return [draft.rootId];
+  const parent: Record<string, string> = {};
+  const q: string[] = [draft.rootId];
+  const seen = new Set<string>([draft.rootId]);
+  while (q.length) {
+    const id = q.shift()!;
+    const n = draft.nodes[id];
+    if (!n) continue;
+    for (const c of n.choices) {
+      if (!c.targetId || seen.has(c.targetId)) continue;
+      seen.add(c.targetId);
+      parent[c.targetId] = id;
+      q.push(c.targetId);
+    }
+  }
+  if (!parent[targetId] && targetId !== draft.rootId) return [targetId];
+  const out: string[] = [targetId];
+  let cur = targetId;
+  while (parent[cur]) {
+    cur = parent[cur];
+    out.unshift(cur);
+  }
+  return out;
+}
+
+/** Comparator: numeric prefix first, then Korean/others by locale. */
+export function compareSceneNames(a: string, b: string): number {
+  const na = /^\s*(\d+)/.exec(a);
+  const nb = /^\s*(\d+)/.exec(b);
+  if (na && nb) {
+    const d = parseInt(na[1], 10) - parseInt(nb[1], 10);
+    if (d !== 0) return d;
+    return a.localeCompare(b, "ko");
+  }
+  if (na && !nb) return -1;
+  if (!na && nb) return 1;
+  return a.localeCompare(b, "ko");
 }
