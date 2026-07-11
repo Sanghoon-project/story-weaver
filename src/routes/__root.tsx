@@ -77,14 +77,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "비주얼 노벨 시나리오 에디터" },
+      { name: "description", content: "분기점 기반 비주얼 노벨 시나리오 설계 도구" },
+      { property: "og:title", content: "비주얼 노벨 시나리오 에디터" },
+      { property: "og:description", content: "분기점 기반 비주얼 노벨 시나리오 설계 도구" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
