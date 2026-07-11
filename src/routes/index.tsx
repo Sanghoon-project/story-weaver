@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import { useVNStore, type SceneNode } from "@/lib/vn-store";
 
 export const Route = createFileRoute("/")({
