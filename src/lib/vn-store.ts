@@ -159,6 +159,40 @@ export function useProjects(userId: string | null) {
     );
   }, []);
 
+  const importProject = useCallback((raw: unknown): Project | null => {
+    try {
+      const src = raw as Partial<Project>;
+      if (!src || !src.draft || !(src.draft as Draft).nodes) return null;
+      const p: Project = {
+        id: id("p"),
+        name: (src.name || "가져온 프로젝트").toString(),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        draft: JSON.parse(JSON.stringify(src.draft)),
+        versions: Array.isArray(src.versions)
+          ? src.versions.map((v) => ({
+              id: id("v"),
+              label: v.label || "가져온 버전",
+              createdAt: v.createdAt || Date.now(),
+              draft: JSON.parse(JSON.stringify(v.draft)),
+            }))
+          : [],
+      };
+      if (p.versions.length === 0) {
+        p.versions = [{
+          id: id("v"),
+          label: "v1 · 가져옴",
+          createdAt: Date.now(),
+          draft: JSON.parse(JSON.stringify(p.draft)),
+        }];
+      }
+      setProjects((ps) => [p, ...ps]);
+      return p;
+    } catch {
+      return null;
+    }
+  }, []);
+
   return {
     hydrated,
     projects,
@@ -170,6 +204,7 @@ export function useProjects(userId: string | null) {
     createVersion,
     restoreVersion,
     deleteVersion,
+    importProject,
   };
 }
 
