@@ -71,7 +71,7 @@
 
   --ink: oklch(0.2 0.01 40);
   --ink-muted: oklch(0.52 0.02 40);
-  --cream: oklch(0.985 0.008 60);
+  --cream: oklch(0.918 0 0);
   --blush: oklch(0.93 0.045 20);             /* soft pink */
   --sand: oklch(0.94 0.04 80);               /* warm sand */
   --mint: oklch(0.92 0.05 165);              /* soft mint */
