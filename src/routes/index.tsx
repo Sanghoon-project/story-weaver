@@ -331,7 +331,7 @@ function FlowView({
 }) {
   const rendered = useMemo(() => {
     const visited = new Set<string>();
-    const walk = (id: string, depth: number): JSX.Element | null => {
+    const walk = (id: string, depth: number): ReactElement | null => {
       const node = store.project.nodes[id];
       if (!node) return null;
       const seen = visited.has(id);
