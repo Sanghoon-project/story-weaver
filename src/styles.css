@@ -5,10 +5,13 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: "Malgun Gothic", "맑은 고딕", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
-  --radius-sm: 8px;
-  --radius-md: 11px;
-  --radius-lg: 18px;
+  --font-sans: "Poppins", "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", "맑은 고딕", system-ui, sans-serif;
+  --font-write: "Noto Sans KR", "맑은 고딕", system-ui, sans-serif;
+  --font-display: "Poppins", "Pretendard", system-ui, sans-serif;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
   --radius-pill: 9999px;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -31,43 +34,53 @@
   --color-ring: var(--ring);
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
-  --color-canvas: var(--canvas);
-  --color-parchment: var(--parchment);
-  --color-pearl: var(--pearl);
+  --color-cream: var(--cream);
+  --color-blush: var(--blush);
+  --color-sand: var(--sand);
+  --color-mint: var(--mint);
+  --color-sky: var(--sky);
+  --color-lavender: var(--lavender);
+  --color-peach: var(--peach);
   --color-hairline: var(--hairline);
-  --color-surface-dark: var(--surface-dark);
+  --shadow-pin: var(--shadow-pin);
+  --shadow-pin-lg: var(--shadow-pin-lg);
 }
 
 :root {
-  --radius: 11px;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0.005 285);
+  --radius: 18px;
+  /* Pinterest-inspired warm palette */
+  --background: oklch(0.985 0.008 60);       /* #fdf9f4 warm cream */
+  --foreground: oklch(0.18 0.01 40);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0.005 285);
+  --card-foreground: oklch(0.18 0.01 40);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0.005 285);
-  /* Apple Action Blue #0066cc */
-  --primary: oklch(0.548 0.181 258.5);
+  --popover-foreground: oklch(0.18 0.01 40);
+  --primary: oklch(0.58 0.21 20);            /* #e0475a warm coral-red */
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.968 0 0);
-  --secondary-foreground: oklch(0.145 0.005 285);
-  --muted: oklch(0.968 0 0);
-  --muted-foreground: oklch(0.52 0 0);
-  --accent: oklch(0.968 0 0);
-  --accent-foreground: oklch(0.145 0.005 285);
-  --destructive: oklch(0.6 0.22 27);
+  --secondary: oklch(0.96 0.015 60);
+  --secondary-foreground: oklch(0.18 0.01 40);
+  --muted: oklch(0.955 0.012 60);
+  --muted-foreground: oklch(0.5 0.02 40);
+  --accent: oklch(0.92 0.05 30);
+  --accent-foreground: oklch(0.18 0.01 40);
+  --destructive: oklch(0.58 0.22 25);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.917 0 0);
-  --input: oklch(0.917 0 0);
-  --ring: oklch(0.548 0.181 258.5);
+  --border: oklch(0.9 0.01 60);
+  --input: oklch(0.9 0.01 60);
+  --ring: oklch(0.58 0.21 20);
 
-  --ink: oklch(0.19 0.003 285);              /* #1d1d1f */
-  --ink-muted: oklch(0.55 0 0);              /* #7a7a7a */
-  --canvas: oklch(1 0 0);                    /* #ffffff */
-  --parchment: oklch(0.968 0.002 285);       /* #f5f5f7 */
-  --pearl: oklch(0.985 0.002 285);           /* #fafafc */
-  --hairline: oklch(0.917 0 0);              /* #e0e0e0 */
-  --surface-dark: oklch(0.24 0.003 285);     /* #272729 */
+  --ink: oklch(0.2 0.01 40);
+  --ink-muted: oklch(0.52 0.02 40);
+  --cream: oklch(0.985 0.008 60);
+  --blush: oklch(0.93 0.045 20);             /* soft pink */
+  --sand: oklch(0.94 0.04 80);               /* warm sand */
+  --mint: oklch(0.92 0.05 165);              /* soft mint */
+  --sky:  oklch(0.92 0.045 235);             /* soft sky */
+  --lavender: oklch(0.9 0.05 300);           /* lavender */
+  --peach: oklch(0.92 0.06 55);              /* peach */
+  --hairline: oklch(0.9 0.008 60);
+  --shadow-pin: 0 2px 8px rgba(60, 30, 20, 0.06), 0 1px 2px rgba(60, 30, 20, 0.04);
+  --shadow-pin-lg: 0 12px 32px rgba(60, 30, 20, 0.12), 0 4px 8px rgba(60, 30, 20, 0.06);
 }
 
 @layer base {
@@ -80,10 +93,17 @@
     -moz-osx-font-smoothing: grayscale;
   }
   body {
-    background-color: var(--color-parchment);
+    background-color: var(--color-cream);
     color: var(--color-ink);
   }
   h1, h2, h3, h4 {
     letter-spacing: -0.02em;
+    font-family: var(--font-display);
+    font-weight: 600;
   }
+}
+
+@utility font-write {
+  font-family: var(--font-write);
+  font-weight: 400;
 }

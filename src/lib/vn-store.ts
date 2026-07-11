@@ -1,215 +1,282 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-export type Choice = {
-  id: string;
-  label: string;
-  targetId: string | null;
-};
-
-export type SceneNode = {
-  id: string;
-  title: string;
-  scenario: string;
-  choices: Choice[];
-};
-
+export type Choice = { id: string; label: string; targetId: string | null };
+export type SceneNode = { id: string; title: string; scenario: string; choices: Choice[] };
+export type SceneMap = Record<string, SceneNode>;
+export type Draft = { rootId: string; nodes: SceneMap };
+export type Version = { id: string; label: string; createdAt: number; draft: Draft };
 export type Project = {
-  nodes: Record<string, SceneNode>;
-  rootId: string;
-};
-
-export type Version = {
   id: string;
-  label: string;
+  name: string;
   createdAt: number;
-  project: Project;
+  updatedAt: number;
+  draft: Draft;
+  versions: Version[];
 };
 
-const STORAGE_KEY = "vn-editor:project:v1";
-const VERSIONS_KEY = "vn-editor:versions:v1";
+const PROJECTS_KEY = (uid: string) => `vn:projects:${uid}:v1`;
 
-function uid(prefix = "n"): string {
-  return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
+function id(p: string) {
+  return `${p}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function createInitialProject(): Project {
-  const rootId = uid("s");
+function starterDraft(): Draft {
+  const root = id("s");
   return {
-    rootId,
+    rootId: root,
     nodes: {
-      [rootId]: {
-        id: rootId,
+      [root]: {
+        id: root,
         title: "시작 장면",
         scenario:
-          "비 내리는 밤, 낡은 카페의 문이 조용히 열린다.\n\n주인공은 창가 자리에 앉은 누군가를 발견한다. 다가갈지, 돌아설지 결정해야 한다.",
+          "이곳에 첫 장면의 대사와 내레이션을 적어보세요.\n\n독자가 어떤 상황에 놓였는지, 무엇을 보고 듣는지 자유롭게 서술해도 좋아요.",
         choices: [
-          { id: uid("c"), label: "다가가서 말을 건다", targetId: null },
-          { id: uid("c"), label: "조용히 자리를 뜬다", targetId: null },
+          { id: id("c"), label: "선택지 A", targetId: null },
+          { id: id("c"), label: "선택지 B", targetId: null },
         ],
       },
     },
   };
 }
 
-function loadProject(): Project {
-  if (typeof window === "undefined") return createInitialProject();
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return createInitialProject();
-    return JSON.parse(raw) as Project;
-  } catch {
-    return createInitialProject();
-  }
-}
-
-function loadVersions(): Version[] {
+function loadProjects(uid: string): Project[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(VERSIONS_KEY);
-    return raw ? (JSON.parse(raw) as Version[]) : [];
+    return JSON.parse(localStorage.getItem(PROJECTS_KEY(uid)) || "[]");
   } catch {
     return [];
   }
 }
 
-export function useVNStore() {
-  const [project, setProject] = useState<Project>(() => createInitialProject());
-  const [currentId, setCurrentId] = useState<string>("");
-  const [versions, setVersions] = useState<Version[]>([]);
+export function useProjects(userId: string | null) {
+  const [projects, setProjects] = useState<Project[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const p = loadProject();
-    setProject(p);
-    setCurrentId(p.rootId);
-    setVersions(loadVersions());
+    if (!userId) {
+      setProjects([]);
+      setHydrated(true);
+      return;
+    }
+    setProjects(loadProjects(userId));
     setHydrated(true);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
-  }, [project, hydrated]);
+    if (!hydrated || !userId) return;
+    localStorage.setItem(PROJECTS_KEY(userId), JSON.stringify(projects));
+  }, [projects, userId, hydrated]);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(VERSIONS_KEY, JSON.stringify(versions));
-  }, [versions, hydrated]);
-
-  const current = project.nodes[currentId];
-
-  const updateCurrent = useCallback(
-    (patch: Partial<SceneNode>) => {
-      setProject((p) => ({
-        ...p,
-        nodes: { ...p.nodes, [currentId]: { ...p.nodes[currentId], ...patch } },
-      }));
-    },
-    [currentId],
-  );
-
-  const updateChoice = useCallback(
-    (choiceId: string, patch: Partial<Choice>) => {
-      setProject((p) => {
-        const node = p.nodes[currentId];
-        return {
-          ...p,
-          nodes: {
-            ...p.nodes,
-            [currentId]: {
-              ...node,
-              choices: node.choices.map((c) =>
-                c.id === choiceId ? { ...c, ...patch } : c,
-              ),
-            },
-          },
-        };
-      });
-    },
-    [currentId],
-  );
-
-  const createLinkedScene = useCallback(
-    (choiceId: string) => {
-      const newId = uid("s");
-      setProject((p) => {
-        const parent = p.nodes[currentId];
-        const choice = parent.choices.find((c) => c.id === choiceId);
-        const newNode: SceneNode = {
-          id: newId,
-          title: `장면 · ${choice?.label || "새 장면"}`.slice(0, 40),
-          scenario: "",
-          choices: [
-            { id: uid("c"), label: "선택지 A", targetId: null },
-            { id: uid("c"), label: "선택지 B", targetId: null },
-          ],
-        };
-        return {
-          ...p,
-          nodes: {
-            ...p.nodes,
-            [newId]: newNode,
-            [currentId]: {
-              ...parent,
-              choices: parent.choices.map((c) =>
-                c.id === choiceId ? { ...c, targetId: newId } : c,
-              ),
-            },
-          },
-        };
-      });
-      setCurrentId(newId);
-    },
-    [currentId],
-  );
-
-  const saveVersion = useCallback(
-    (label: string) => {
-      const v: Version = {
-        id: uid("v"),
-        label: label || new Date().toLocaleString("ko-KR"),
-        createdAt: Date.now(),
-        project: JSON.parse(JSON.stringify(project)),
-      };
-      setVersions((vs) => [v, ...vs]);
-    },
-    [project],
-  );
-
-  const restoreVersion = useCallback((id: string) => {
-    setVersions((vs) => {
-      const v = vs.find((x) => x.id === id);
-      if (v) {
-        setProject(v.project);
-        setCurrentId(v.project.rootId);
-      }
-      return vs;
-    });
+  const createProject = useCallback((name: string): Project => {
+    const draft = starterDraft();
+    const v1: Version = {
+      id: id("v"),
+      label: "v1 · 초기 버전",
+      createdAt: Date.now(),
+      draft: JSON.parse(JSON.stringify(draft)),
+    };
+    const p: Project = {
+      id: id("p"),
+      name: name.trim() || "새 프로젝트",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      draft,
+      versions: [v1],
+    };
+    setProjects((ps) => [p, ...ps]);
+    return p;
   }, []);
 
-  const deleteVersion = useCallback((id: string) => {
-    setVersions((vs) => vs.filter((v) => v.id !== id));
+  const deleteProject = useCallback((pid: string) => {
+    setProjects((ps) => ps.filter((p) => p.id !== pid));
   }, []);
 
-  const resetProject = useCallback(() => {
-    const p = createInitialProject();
-    setProject(p);
-    setCurrentId(p.rootId);
+  const renameProject = useCallback((pid: string, name: string) => {
+    setProjects((ps) => ps.map((p) => (p.id === pid ? { ...p, name, updatedAt: Date.now() } : p)));
+  }, []);
+
+  const updateDraft = useCallback((pid: string, updater: (d: Draft) => Draft) => {
+    setProjects((ps) =>
+      ps.map((p) => (p.id === pid ? { ...p, draft: updater(p.draft), updatedAt: Date.now() } : p)),
+    );
+  }, []);
+
+  // 저장: 현재 드래프트를 가장 최신 버전에 덮어쓴다
+  const saveOverVersion = useCallback((pid: string) => {
+    setProjects((ps) =>
+      ps.map((p) => {
+        if (p.id !== pid) return p;
+        const versions = [...p.versions];
+        if (versions.length === 0) {
+          versions.push({
+            id: id("v"),
+            label: "v1",
+            createdAt: Date.now(),
+            draft: JSON.parse(JSON.stringify(p.draft)),
+          });
+        } else {
+          versions[0] = {
+            ...versions[0],
+            createdAt: Date.now(),
+            draft: JSON.parse(JSON.stringify(p.draft)),
+          };
+        }
+        return { ...p, versions, updatedAt: Date.now() };
+      }),
+    );
+  }, []);
+
+  // 새 버전 생성: 드래프트 스냅샷을 새 버전으로 추가
+  const createVersion = useCallback((pid: string, label: string) => {
+    setProjects((ps) =>
+      ps.map((p) => {
+        if (p.id !== pid) return p;
+        const v: Version = {
+          id: id("v"),
+          label: label.trim() || `v${p.versions.length + 1}`,
+          createdAt: Date.now(),
+          draft: JSON.parse(JSON.stringify(p.draft)),
+        };
+        return { ...p, versions: [v, ...p.versions], updatedAt: Date.now() };
+      }),
+    );
+  }, []);
+
+  const restoreVersion = useCallback((pid: string, vid: string) => {
+    setProjects((ps) =>
+      ps.map((p) => {
+        if (p.id !== pid) return p;
+        const v = p.versions.find((x) => x.id === vid);
+        if (!v) return p;
+        return { ...p, draft: JSON.parse(JSON.stringify(v.draft)), updatedAt: Date.now() };
+      }),
+    );
+  }, []);
+
+  const deleteVersion = useCallback((pid: string, vid: string) => {
+    setProjects((ps) =>
+      ps.map((p) => (p.id === pid ? { ...p, versions: p.versions.filter((v) => v.id !== vid) } : p)),
+    );
   }, []);
 
   return {
-    project,
-    current,
-    currentId,
-    setCurrentId,
-    updateCurrent,
-    updateChoice,
-    createLinkedScene,
-    versions,
-    saveVersion,
+    hydrated,
+    projects,
+    createProject,
+    deleteProject,
+    renameProject,
+    updateDraft,
+    saveOverVersion,
+    createVersion,
     restoreVersion,
     deleteVersion,
-    resetProject,
-    hydrated,
   };
+}
+
+// ---- Draft-level helpers (pure) ----
+export const draftOps = {
+  makeChoiceId: () => id("c"),
+  makeSceneId: () => id("s"),
+  updateNode(d: Draft, nodeId: string, patch: Partial<SceneNode>): Draft {
+    return { ...d, nodes: { ...d.nodes, [nodeId]: { ...d.nodes[nodeId], ...patch } } };
+  },
+  updateChoice(d: Draft, nodeId: string, choiceId: string, patch: Partial<Choice>): Draft {
+    const n = d.nodes[nodeId];
+    return {
+      ...d,
+      nodes: {
+        ...d.nodes,
+        [nodeId]: {
+          ...n,
+          choices: n.choices.map((c) => (c.id === choiceId ? { ...c, ...patch } : c)),
+        },
+      },
+    };
+  },
+  addChoice(d: Draft, nodeId: string): Draft {
+    const n = d.nodes[nodeId];
+    return {
+      ...d,
+      nodes: {
+        ...d.nodes,
+        [nodeId]: {
+          ...n,
+          choices: [...n.choices, { id: id("c"), label: "새 선택지", targetId: null }],
+        },
+      },
+    };
+  },
+  removeChoice(d: Draft, nodeId: string, choiceId: string): Draft {
+    const n = d.nodes[nodeId];
+    return {
+      ...d,
+      nodes: {
+        ...d.nodes,
+        [nodeId]: { ...n, choices: n.choices.filter((c) => c.id !== choiceId) },
+      },
+    };
+  },
+  createLinked(d: Draft, nodeId: string, choiceId: string): { draft: Draft; newId: string } {
+    const newId = id("s");
+    const parent = d.nodes[nodeId];
+    const choice = parent.choices.find((c) => c.id === choiceId);
+    const label = choice?.label || "새 장면";
+    const newNode: SceneNode = {
+      id: newId,
+      title: label.slice(0, 30),
+      scenario: "",
+      choices: [
+        { id: id("c"), label: "선택지 A", targetId: null },
+        { id: id("c"), label: "선택지 B", targetId: null },
+      ],
+    };
+    return {
+      newId,
+      draft: {
+        ...d,
+        nodes: {
+          ...d.nodes,
+          [newId]: newNode,
+          [nodeId]: {
+            ...parent,
+            choices: parent.choices.map((c) =>
+              c.id === choiceId ? { ...c, targetId: newId } : c,
+            ),
+          },
+        },
+      },
+    };
+  },
+};
+
+export function usePath(draft: Draft | undefined) {
+  // Path of scene IDs from root through chosen choices to current focused scene.
+  const [path, setPath] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!draft) return;
+    setPath((prev) => {
+      // Keep prev path if still valid
+      if (prev.length > 0 && prev.every((id) => draft.nodes[id])) return prev;
+      return [draft.rootId];
+    });
+  }, [draft?.rootId, draft]);
+
+  const push = useCallback((sceneId: string) => {
+    setPath((p) => [...p, sceneId]);
+  }, []);
+  const goto = useCallback((index: number) => {
+    setPath((p) => p.slice(0, index + 1));
+  }, []);
+  const reset = useCallback(() => {
+    if (draft) setPath([draft.rootId]);
+  }, [draft]);
+
+  const currentId = path[path.length - 1];
+  const stack = useMemo(
+    () => (draft ? path.map((id) => draft.nodes[id]).filter(Boolean) : []),
+    [path, draft],
+  );
+
+  return { path, stack, currentId, push, goto, reset };
 }
